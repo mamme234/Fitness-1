@@ -1,26 +1,27 @@
 import axios from "axios";
 
-/**
- * ============================
- * API CONFIGURATION
- * ============================
- */
+/* ==========================================
+   API CONFIGURATION
+========================================== */
 
 const api = axios.create({
-    baseURL: import.meta.env.VITE_API_URL || "https://fitness-1-1.onrender.com/api",
+    baseURL:
+        import.meta.env.VITE_API_URL ||
+        "https://fitness-1-1.onrender.com/api",
+
     timeout: 30000,
-    withCredentials: false,
+
     headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
     },
+
+    withCredentials: false,
 });
 
-/**
- * ============================
- * REQUEST INTERCEPTOR
- * ============================
- */
+/* ==========================================
+   REQUEST INTERCEPTOR
+========================================== */
 
 api.interceptors.request.use(
     (config) => {
@@ -30,47 +31,51 @@ api.interceptors.request.use(
             config.headers.Authorization = `Bearer ${token}`;
         }
 
+        console.log("=================================");
+        console.log("API REQUEST");
+        console.log("URL:", config.baseURL + config.url);
+        console.log("METHOD:", config.method);
+        console.log("DATA:", config.data);
+        console.log("=================================");
+
         return config;
     },
     (error) => Promise.reject(error)
 );
 
-/**
- * ============================
- * RESPONSE INTERCEPTOR
- * ============================
- */
+/* ==========================================
+   RESPONSE INTERCEPTOR
+========================================== */
 
 api.interceptors.response.use(
-    (response) => response,
+    (response) => {
+        console.log("=================================");
+        console.log("API RESPONSE");
+        console.log(response.data);
+        console.log("=================================");
+
+        return response;
+    },
     (error) => {
+        console.log("=================================");
+        console.log("API ERROR");
+
         if (error.response) {
-            switch (error.response.status) {
-                case 401:
-                    console.warn("Unauthorized");
-                    localStorage.removeItem("token");
-                    break;
+            console.log("Status:", error.response.status);
+            console.log("Data:", error.response.data);
 
-                case 403:
-                    console.warn("Forbidden");
-                    break;
-
-                case 404:
-                    console.warn("API endpoint not found");
-                    break;
-
-                case 500:
-                    console.warn("Server error");
-                    break;
-
-                default:
-                    console.warn(error.response.data?.message || "API Error");
+            if (error.response.status === 401) {
+                localStorage.removeItem("token");
             }
+
         } else if (error.request) {
-            console.warn("Cannot connect to server");
+            console.log("No response received.");
+            console.log(error.request);
         } else {
-            console.warn(error.message);
+            console.log(error.message);
         }
+
+        console.log("=================================");
 
         return Promise.reject(error);
     }
