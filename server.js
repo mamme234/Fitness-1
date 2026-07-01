@@ -29,7 +29,7 @@ connectDatabase();
 
 app.use(cors({
     origin: [
-        "https://fitness-fuza.vercel.app" // Replace with your Vercel URL
+        "https://fitness-1-kohl.vercel.app" // Replace with your Vercel URL
     ],
     credentials: true
 }));
