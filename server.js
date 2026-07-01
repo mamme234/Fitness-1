@@ -18,30 +18,37 @@ dotenv.config();
 
 const app = express();
 
-/* ===========================
+/* ==========================
    DATABASE
-=========================== */
+========================== */
+
 connectDatabase();
 
-/* ===========================
+/* ==========================
    MIDDLEWARE
-=========================== */
+========================== */
 
 app.use(cors({
     origin: [
-        "https://fitness-1-kohl.vercel.app" // Replace with your Vercel URL
+        "https://fitness-1-kohl.vercel.app",
+        "http://localhost:5173"
     ],
-    credentials: true
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allowedHeaders: [
+        "Content-Type",
+        "Authorization"
+    ]
 }));
 
-app.use(express.json({ limit: "20mb" }));
+app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(morgan("dev"));
 
-/* ===========================
+/* ==========================
    ROOT
-=========================== */
+========================== */
 
 app.get("/", (req, res) => {
     res.json({
@@ -52,12 +59,12 @@ app.get("/", (req, res) => {
     });
 });
 
-/* ===========================
+/* ==========================
    HEALTH
-=========================== */
+========================== */
 
 app.get("/api/health", (req, res) => {
-    res.status(200).json({
+    res.json({
         success: true,
         message: "API is healthy",
         uptime: process.uptime(),
@@ -65,9 +72,9 @@ app.get("/api/health", (req, res) => {
     });
 });
 
-/* ===========================
+/* ==========================
    API ROUTES
-=========================== */
+========================== */
 
 app.use("/api/auth", authRoutes);
 app.use("/api/workouts", workoutRoutes);
@@ -76,9 +83,9 @@ app.use("/api/challenges", challengeRoutes);
 app.use("/api/progress", progressRoutes);
 app.use("/api/nutrition", nutritionRoutes);
 
-/* ===========================
+/* ==========================
    404
-=========================== */
+========================== */
 
 app.use((req, res) => {
     res.status(404).json({
@@ -87,12 +94,12 @@ app.use((req, res) => {
     });
 });
 
-/* ===========================
+/* ==========================
    ERROR HANDLER
-=========================== */
+========================== */
 
 app.use((err, req, res, next) => {
-    console.error(err);
+    console.error("Server Error:", err);
 
     res.status(err.status || 500).json({
         success: false,
@@ -100,16 +107,15 @@ app.use((err, req, res, next) => {
     });
 });
 
-/* ===========================
+/* ==========================
    SERVER
-=========================== */
+========================== */
 
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
     console.log("==================================");
-    console.log(`🚀 Gym Pro API running`);
-    console.log(`🌍 Port : ${PORT}`);
-    console.log(`❤️ Health : /api/health`);
+    console.log(`🚀 Gym Pro API running on port ${PORT}`);
+    console.log(`🌍 Environment: ${process.env.NODE_ENV || "development"}`);
     console.log("==================================");
 });
