@@ -1,16 +1,16 @@
 import { Routes, Route } from "react-router-dom";
 
-import Navbar from "./components/Navbar";
-import ProtectedRoute from "./components/ProtectedRoute";
+import Navbar from "./components/Navbar.jsx";
+import ProtectedRoute from "./components/ProtectedRoute.jsx";
 
-import Dashboard from "./pages/Dashboard";
-import Workout from "./pages/Workout";
-import Exercise from "./pages/Exercise";
-import Challenges from "./pages/Challenges";
-import Progress from "./pages/Progress";
-import Nutrition from "./pages/Nutrition";
-import Login from "./pages/Login";
-import Register from "./pages/Register";
+import Dashboard from "./pages/Dashboard.jsx";
+import Workout from "./pages/Workout.jsx";
+import Exercise from "./pages/Exercise.jsx";
+import Challenges from "./pages/Challenges.jsx";
+import Progress from "./pages/Progress.jsx";
+import Nutrition from "./pages/Nutrition.jsx";
+import Login from "./pages/Login.jsx";
+import Register from "./pages/Register.jsx";
 
 export default function App() {
     return (
