@@ -7,7 +7,7 @@ import axios from "axios";
  */
 
 const api = axios.create({
-    baseURL: import.meta.env.VITE_API_URL || "https://fitness-309k.onrender.com/api",
+    baseURL: import.meta.env.VITE_API_URL || "https://fitness-1-1.onrender.com/api",
     timeout: 30000,
     withCredentials: false,
     headers: {
