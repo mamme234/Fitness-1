@@ -1,9 +1,9 @@
 import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
+import morgan from "morgan";
 import cookieParser from "cookie-parser";
 
-// Database
 import connectDatabase from "./config/database.js";
 
 // Routes
@@ -16,49 +16,59 @@ import nutritionRoutes from "./routes/nutrition.js";
 
 dotenv.config();
 
-// Initialize app
 const app = express();
 
-/**
- * =========================
- * MIDDLEWARES
- * =========================
- */
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(cookieParser());
-
-app.use(
-    cors({
-        origin: "*",
-        credentials: true
-    })
-);
-
-/**
- * =========================
- * DATABASE CONNECTION
- * =========================
- */
+/* ===========================
+   DATABASE
+=========================== */
 connectDatabase();
 
-/**
- * =========================
- * HEALTH CHECK
- * =========================
- */
-app.get("/api/health", (req, res) => {
-    res.status(200).json({
+/* ===========================
+   MIDDLEWARE
+=========================== */
+
+app.use(cors({
+    origin: [
+        "https://fitness-fuza.vercel.app" // Replace with your Vercel URL
+    ],
+    credentials: true
+}));
+
+app.use(express.json({ limit: "20mb" }));
+app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
+app.use(morgan("dev"));
+
+/* ===========================
+   ROOT
+=========================== */
+
+app.get("/", (req, res) => {
+    res.json({
         success: true,
-        message: "Gym App API is running 🚀"
+        app: "Gym Pro API",
+        version: "1.0.0",
+        status: "Running 🚀"
     });
 });
 
-/**
- * =========================
- * ROUTES
- * =========================
- */
+/* ===========================
+   HEALTH
+=========================== */
+
+app.get("/api/health", (req, res) => {
+    res.status(200).json({
+        success: true,
+        message: "API is healthy",
+        uptime: process.uptime(),
+        timestamp: new Date()
+    });
+});
+
+/* ===========================
+   API ROUTES
+=========================== */
+
 app.use("/api/auth", authRoutes);
 app.use("/api/workouts", workoutRoutes);
 app.use("/api/exercises", exerciseRoutes);
@@ -66,31 +76,40 @@ app.use("/api/challenges", challengeRoutes);
 app.use("/api/progress", progressRoutes);
 app.use("/api/nutrition", nutritionRoutes);
 
-/**
- * =========================
- * ERROR HANDLING
- * =========================
- */
-app.use((err, req, res, next) => {
-    console.error(err.stack);
+/* ===========================
+   404
+=========================== */
 
-    res.status(500).json({
+app.use((req, res) => {
+    res.status(404).json({
         success: false,
-        message: "Internal Server Error",
-        error: err.message
+        message: "Route not found"
     });
 });
 
-/**
- * =========================
- * START SERVER
- * =========================
- */
+/* ===========================
+   ERROR HANDLER
+=========================== */
+
+app.use((err, req, res, next) => {
+    console.error(err);
+
+    res.status(err.status || 500).json({
+        success: false,
+        message: err.message || "Internal Server Error"
+    });
+});
+
+/* ===========================
+   SERVER
+=========================== */
+
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
-    console.log("======================================");
-    console.log(`🚀 Gym App Server running on port ${PORT}`);
-    console.log(`📡 API: http://localhost:${PORT}/api`);
-    console.log("======================================");
+    console.log("==================================");
+    console.log(`🚀 Gym Pro API running`);
+    console.log(`🌍 Port : ${PORT}`);
+    console.log(`❤️ Health : /api/health`);
+    console.log("==================================");
 });
