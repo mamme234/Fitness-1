@@ -1,85 +1,39 @@
 import Workout from "../models/Workout.js";
-import Exercise from "../models/Exercise.js";
 import User from "../models/User.js";
 
 /**
  * =========================
- * CREATE WORKOUT PLAN
+ * START WORKOUT
  * =========================
  */
-export const createWorkout = async (req, res) => {
+export const startWorkout = async (req, res) => {
     try {
-        const userId = req.user._id;
+        const workoutId = req.params.id;
 
-        const {
-            workoutStyle,
-            goal,
-            level,
-            days = 7
-        } = req.body;
+        const workout = await Workout.findById(workoutId);
 
-        // Fetch random exercises for plan
-        const exercises = await Exercise.find({ status: "active" });
-
-        if (!exercises.length) {
+        if (!workout) {
             return res.status(404).json({
                 success: false,
-                message: "No exercises found."
+                message: "Workout not found."
             });
         }
 
-        const workouts = [];
+        workout.startedAt = new Date();
+        workout.isCompleted = false;
 
-        const weekDays = [
-            "Monday",
-            "Tuesday",
-            "Wednesday",
-            "Thursday",
-            "Friday",
-            "Saturday",
-            "Sunday"
-        ];
+        await workout.save();
 
-        for (let i = 0; i < days; i++) {
-
-            const selectedExercises = exercises
-                .sort(() => 0.5 - Math.random())
-                .slice(0, 6);
-
-            const workoutExercises = selectedExercises.map((ex, index) => ({
-                exercise: ex._id,
-                order: index + 1,
-                sets: ex.sets,
-                reps: ex.reps,
-                restTime: ex.restTime
-            }));
-
-            const workout = await Workout.create({
-                user: userId,
-                title: `${workoutStyle || "AI"} Day ${i + 1}`,
-                description: "Auto generated workout plan",
-                workoutStyle: workoutStyle || "Full Body",
-                goal: goal || "Gain Muscle",
-                level: level || "Beginner",
-                dayOfWeek: weekDays[i],
-                exercises: workoutExercises,
-                totalExercises: workoutExercises.length,
-                estimatedDuration: workoutExercises.length * 10
-            });
-
-            workouts.push(workout);
-        }
-
-        res.status(201).json({
+        res.status(200).json({
             success: true,
-            message: "Workout plan created successfully.",
-            workouts
+            message: "Workout started.",
+            workout
         });
 
     } catch (error) {
         res.status(500).json({
             success: false,
-            message: "Failed to create workout.",
+            message: "Failed to start workout.",
             error: error.message
         });
     }
@@ -88,16 +42,125 @@ export const createWorkout = async (req, res) => {
 
 /**
  * =========================
- * GET WEEKLY WORKOUTS
+ * COMPLETE EXERCISE
  * =========================
  */
-export const getWeeklyWorkouts = async (req, res) => {
+export const completeExercise = async (req, res) => {
     try {
-        const userId = req.user._id;
+        const { id, exerciseId } = req.params;
 
-        const workouts = await Workout.find({ user: userId })
-            .populate("exercises.exercise")
-            .sort({ createdAt: 1 });
+        const workout = await Workout.findById(id);
+
+        if (!workout) {
+            return res.status(404).json({
+                success: false,
+                message: "Workout not found."
+            });
+        }
+
+        const exercise = workout.exercises.find(
+            (ex) => ex.exercise.toString() === exerciseId
+        );
+
+        if (!exercise) {
+            return res.status(404).json({
+                success: false,
+                message: "Exercise not found in workout."
+            });
+        }
+
+        exercise.completed = true;
+
+        workout.completedExercises =
+            workout.exercises.filter((ex) => ex.completed).length;
+
+        workout.completionPercentage = Math.round(
+            (workout.completedExercises / workout.totalExercises) * 100
+        );
+
+        await workout.save();
+
+        res.status(200).json({
+            success: true,
+            message: "Exercise completed.",
+            workout
+        });
+
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: "Failed to complete exercise.",
+            error: error.message
+        });
+    }
+};
+
+
+/**
+ * =========================
+ * FINISH WORKOUT
+ * =========================
+ */
+export const finishWorkout = async (req, res) => {
+    try {
+        const workout = await Workout.findById(req.params.id);
+
+        if (!workout) {
+            return res.status(404).json({
+                success: false,
+                message: "Workout not found."
+            });
+        }
+
+        workout.completedAt = new Date();
+        workout.isCompleted = true;
+
+        const duration = workout.startedAt
+            ? (new Date() - workout.startedAt) / 60000
+            : workout.estimatedDuration;
+
+        workout.caloriesBurned =
+            workout.totalExercises * 50;
+
+        await workout.save();
+
+        // Update user stats
+        await User.findByIdAndUpdate(workout.user, {
+            $inc: {
+                completedWorkouts: 1,
+                totalCaloriesBurned: workout.caloriesBurned,
+                totalWorkoutMinutes: Math.round(duration)
+            },
+            lastWorkout: new Date()
+        });
+
+        res.status(200).json({
+            success: true,
+            message: "Workout completed successfully.",
+            workout
+        });
+
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: "Failed to finish workout.",
+            error: error.message
+        });
+    }
+};
+
+
+/**
+ * =========================
+ * WORKOUT HISTORY
+ * =========================
+ */
+export const workoutHistory = async (req, res) => {
+    try {
+        const workouts = await Workout.find({
+            user: req.user._id,
+            isCompleted: true
+        }).sort({ completedAt: -1 });
 
         res.status(200).json({
             success: true,
@@ -108,7 +171,7 @@ export const getWeeklyWorkouts = async (req, res) => {
     } catch (error) {
         res.status(500).json({
             success: false,
-            message: "Failed to fetch workouts.",
+            message: "Failed to fetch history.",
             error: error.message
         });
     }
@@ -117,35 +180,31 @@ export const getWeeklyWorkouts = async (req, res) => {
 
 /**
  * =========================
- * GET WORKOUT BY DAY
+ * DELETE WORKOUT
  * =========================
  */
-export const getWorkoutByDay = async (req, res) => {
+export const deleteWorkout = async (req, res) => {
     try {
-        const userId = req.user._id;
-        const { day } = req.params;
-
-        const workout = await Workout.findOne({
-            user: userId,
-            dayOfWeek: day
-        }).populate("exercises.exercise");
+        const workout = await Workout.findById(req.params.id);
 
         if (!workout) {
             return res.status(404).json({
                 success: false,
-                message: "Workout not found for this day."
+                message: "Workout not found."
             });
         }
 
+        await workout.deleteOne();
+
         res.status(200).json({
             success: true,
-            workout
+            message: "Workout deleted successfully."
         });
 
     } catch (error) {
         res.status(500).json({
             success: false,
-            message: "Failed to fetch workout.",
+            message: "Failed to delete workout.",
             error: error.message
         });
     }
