@@ -17,11 +17,26 @@ export const AuthProvider = ({ children }) => {
     };
 
     const register = async (data) => {
-        const res = await api.post("/auth/register", data);
+    const res = await fetch(
+        "https://fitness-1-1.onrender.com/api/auth/register",
+        {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(data),
+        }
+    );
 
-        localStorage.setItem("token", res.data.token);
-        setUser(res.data.user);
-    };
+    const result = await res.json();
+
+    if (!res.ok) {
+        throw new Error(result.message);
+    }
+
+    localStorage.setItem("token", result.token);
+    setUser(result.user);
+};
 
     const logout = () => {
         localStorage.removeItem("token");
