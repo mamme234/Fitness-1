@@ -1,17 +1,40 @@
-import { Link } from "react-router-dom";
+import React from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
-export default function Navbar() {
-    return (
-        <nav className="bg-gray-900 text-white p-4 flex justify-between items-center">
-            <h1 className="text-xl font-bold">💪 Gym Pro</h1>
+const Navbar = () => {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
 
-            <div className="flex gap-4">
-                <Link to="/">Home</Link>
-                <Link to="/workout">Workout</Link>
-                <Link to="/exercises">Exercises</Link>
-                <Link to="/progress">Progress</Link>
-                <Link to="/nutrition">Nutrition</Link>
-            </div>
-        </nav>
-    );
-              }
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+
+  return (
+    <nav className="navbar">
+      <div className="navbar-brand">
+        <Link to="/" className="brand-logo">Pro Gym App</Link>
+      </div>
+      <div className="navbar-menu">
+        {user ? (
+          <>
+            <Link to="/dashboard" className="nav-item">Dashboard</Link>
+            <Link to="/workout" className="nav-item">Workouts</Link>
+            <Link to="/nutrition" className="nav-item">Nutrition</Link>
+            <Link to="/progress" className="nav-item">Progress</Link>
+            <Link to="/challenges" className="nav-item">Challenges</Link>
+            <button onClick={handleLogout} className="btn-logout">Logout</button>
+          </>
+        ) : (
+          <>
+            <Link to="/login" className="nav-item">Login</Link>
+            <Link to="/register" className="nav-item">Register</Link>
+          </>
+        )}
+      </div>
+    </nav>
+  );
+};
+
+export default Navbar;
