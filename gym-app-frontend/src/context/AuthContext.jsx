@@ -1,64 +1,69 @@
-import { createContext, useState, useEffect } from "react";
-import api from "../api/axios";
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import axios from 'axios';
 
-export const AuthContext = createContext();
+// 1. Create the Context
+const AuthContext = createContext(null);
 
+// 2. Create the Provider Component
 export const AuthProvider = ({ children }) => {
-    const [user, setUser] = useState(null);
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-    const login = async (email, password) => {
-        const res = await api.post("/auth/login", {
-            email,
-            password
-        });
-
-        localStorage.setItem("token", res.data.token);
-        setUser(res.data.user);
-    };
-
-    const register = async (data) => {
-    const res = await fetch(
-        "https://fitness-1-1.onrender.com/api/auth/register",
-        {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify(data),
-        }
-    );
-
-    const result = await res.json();
-
-    if (!res.ok) {
-        throw new Error(result.message);
+  // Check if a user session exists on initial load
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    const savedUser = localStorage.getItem('user');
+    if (token && savedUser) {
+      setUser(JSON.parse(savedUser));
+      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
     }
+    setLoading(false);
+  }, []);
 
-    localStorage.setItem("token", result.token);
-    setUser(result.user);
+  // Login handler
+  const login = async (email, password) => {
+    const response = await axios.post(`${import.meta.env.VITE_API_URL}/auth/login`, { email, password });
+    const { token, user: userData } = response.data;
+    
+    localStorage.setItem('token', token);
+    localStorage.setItem('user', JSON.stringify(userData));
+    axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    setUser(userData);
+    return response.data;
+  };
+
+  // Register handler
+  const register = async (name, email, password) => {
+    const response = await axios.post(`${import.meta.env.VITE_API_URL}/auth/register`, { name, email, password });
+    const { token, user: userData } = response.data;
+
+    localStorage.setItem('token', token);
+    localStorage.setItem('user', JSON.stringify(userData));
+    axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    setUser(userData);
+    return response.data;
+  };
+
+  // Logout handler
+  const logout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    delete axios.defaults.headers.common['Authorization'];
+    setUser(null);
+  };
+
+  return (
+    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+      {!loading && children}
+    </AuthContext.Provider>
+  );
 };
 
-    const logout = () => {
-        localStorage.removeItem("token");
-        setUser(null);
-    };
-
-    const loadUser = async () => {
-        try {
-            const res = await api.get("/auth/me");
-            setUser(res.data.user);
-        } catch {
-            setUser(null);
-        }
-    };
-
-    useEffect(() => {
-        loadUser();
-    }, []);
-
-    return (
-        <AuthContext.Provider value={{ user, login, register, logout }}>
-            {children}
-        </AuthContext.Provider>
-    );
+// 3. Export the Custom Hook (This is what Vite was missing!)
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
 };
